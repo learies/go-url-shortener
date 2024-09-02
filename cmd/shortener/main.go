@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 var (
@@ -69,11 +72,15 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", mainHandler)
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+
+	r.Post("/", mainHandler)
+	r.Get("/*", mainHandler)
 
 	log.Println("Starting server on :8080...")
-	err := http.ListenAndServe(":8080", mux)
+	err := http.ListenAndServe(":8080", r)
 	if err != nil {
 		log.Fatal(err)
 	}
