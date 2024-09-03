@@ -6,10 +6,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/learies/go-url-shortener/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMainHandler(t *testing.T) {
+	cfg = config.ParseConfig()
+
 	tests := []struct {
 		name           string
 		method         string

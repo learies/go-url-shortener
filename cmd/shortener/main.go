@@ -76,6 +76,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	cfg = config.ParseConfig()
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
