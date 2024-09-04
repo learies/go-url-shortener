@@ -17,6 +17,8 @@ func TestMainHandler(t *testing.T) {
 	cfg = config.ParseConfig()
 	cfg.BaseURL = "http://localhost:8080"
 
+	store := NewURLStore()
+
 	tests := []struct {
 		name           string
 		method         string
@@ -69,8 +71,8 @@ func TestMainHandler(t *testing.T) {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(methodNotAllowedHandler)
-	r.Post("/", postHandler)
-	r.Get("/*", getHandler)
+	r.Post("/", postHandler(store))
+	r.Get("/*", getHandler(store))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
