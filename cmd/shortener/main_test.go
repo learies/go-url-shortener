@@ -6,17 +6,22 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/learies/go-url-shortener/config"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/learies/go-url-shortener/config"
 )
 
 func TestMainHandler(t *testing.T) {
 	cfg = config.ParseConfig()
+	cfg.BaseURL = "http://localhost:8080"
 
 	tests := []struct {
 		name           string
 		method         string
 		body           string
+		url            string
 		expectedCode   int
 		expectedHeader string
 		expectedBody   string
@@ -25,6 +30,7 @@ func TestMainHandler(t *testing.T) {
 			name:           "POST valid URL",
 			method:         http.MethodPost,
 			body:           "http://example.com",
+			url:            "/",
 			expectedCode:   http.StatusCreated,
 			expectedHeader: "Content-Type",
 			expectedBody:   "http://localhost:8080/",
@@ -33,39 +39,49 @@ func TestMainHandler(t *testing.T) {
 			name:         "POST invalid URL",
 			method:       http.MethodPost,
 			body:         "invalid-url",
+			url:          "/",
 			expectedCode: http.StatusBadRequest,
 		},
 		{
 			name:         "GET existing short URL",
 			method:       http.MethodGet,
 			body:         "http://example.com",
+			url:          "/{id}",
 			expectedCode: http.StatusTemporaryRedirect,
 		},
 		{
 			name:         "GET non-existing short URL",
 			method:       http.MethodGet,
-			body:         "nonexisting",
+			body:         "",
+			url:          "/nonexisting",
 			expectedCode: http.StatusNotFound,
 		},
 		{
 			name:         "Method Not Allowed",
 			method:       http.MethodPut,
+			body:         "",
+			url:          "/",
 			expectedCode: http.StatusMethodNotAllowed,
 		},
 	}
 
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(methodNotAllowedHandler)
+	r.Post("/", postHandler)
+	r.Get("/*", getHandler)
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mux := http.NewServeMux()
-			mux.HandleFunc("/", mainHandler)
 
-			// For POST method
+			// Для метода POST
 			if tt.method == http.MethodPost {
-				req, err := http.NewRequest(tt.method, "/", strings.NewReader(tt.body))
+				req, err := http.NewRequest(tt.method, tt.url, strings.NewReader(tt.body))
 				assert.NoError(t, err)
 
 				rec := httptest.NewRecorder()
-				mux.ServeHTTP(rec, req)
+				r.ServeHTTP(rec, req)
 
 				assert.Equal(t, tt.expectedCode, rec.Code)
 
@@ -74,43 +90,43 @@ func TestMainHandler(t *testing.T) {
 				}
 			}
 
-			// For GET method
+			// Для метода GET
 			if tt.method == http.MethodGet {
-				if tt.body != "nonexisting" {
-					// First, create a shortened URL
+				if tt.body != "" {
+					// Сначала создаем короткий URL
 					reqPost, err := http.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
 					assert.NoError(t, err)
 
 					recPost := httptest.NewRecorder()
-					mux.ServeHTTP(recPost, reqPost)
+					r.ServeHTTP(recPost, reqPost)
 
-					// Extract short URL from the POST response
-					shortURL := strings.TrimPrefix(recPost.Body.String(), "http://localhost:8080/")
+					// Извлекаем короткий URL из ответа на POST
+					shortURL := strings.TrimPrefix(recPost.Body.String(), cfg.BaseURL+"/")
 					req, err := http.NewRequest(tt.method, "/"+shortURL, nil)
 					assert.NoError(t, err)
 
 					rec := httptest.NewRecorder()
-					mux.ServeHTTP(rec, req)
+					r.ServeHTTP(rec, req)
 
 					assert.Equal(t, tt.expectedCode, rec.Code)
 				} else {
-					req, err := http.NewRequest(tt.method, "/"+tt.body, nil)
+					req, err := http.NewRequest(tt.method, tt.url, nil)
 					assert.NoError(t, err)
 
 					rec := httptest.NewRecorder()
-					mux.ServeHTTP(rec, req)
+					r.ServeHTTP(rec, req)
 
 					assert.Equal(t, tt.expectedCode, rec.Code)
 				}
 			}
 
-			// For other methods (e.g., PUT)
-			if tt.method == http.MethodPut {
-				req, err := http.NewRequest(tt.method, "/", nil)
+			// Для других методов (например, PUT)
+			if tt.method != http.MethodPost && tt.method != http.MethodGet {
+				req, err := http.NewRequest(tt.method, tt.url, nil)
 				assert.NoError(t, err)
 
 				rec := httptest.NewRecorder()
-				mux.ServeHTTP(rec, req)
+				r.ServeHTTP(rec, req)
 
 				assert.Equal(t, tt.expectedCode, rec.Code)
 			}
