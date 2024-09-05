@@ -1,34 +1,16 @@
 package handlers
 
 import (
-	"crypto/sha256"
-	"encoding/base64"
 	"io"
 	"net/http"
 	"strings"
-	"sync"
 
 	"github.com/learies/go-url-shortener/config"
+	"github.com/learies/go-url-shortener/internal/shortener"
 	"github.com/learies/go-url-shortener/internal/store"
 )
 
-var (
-	hasher   = sha256.New()
-	hasherMu sync.Mutex
-)
-
-func generateShortURL(url string) string {
-	hasherMu.Lock()
-	defer hasherMu.Unlock()
-
-	hasher.Reset()
-	hasher.Write([]byte(url))
-	hash := hasher.Sum(nil)
-	shortURL := base64.URLEncoding.EncodeToString(hash)[:8]
-	return shortURL
-}
-
-func PostHandler(store *store.URLStore, cfg *config.Config) http.HandlerFunc {
+func PostHandler(store *store.URLStore, cfg *config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -43,7 +25,7 @@ func PostHandler(store *store.URLStore, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		shortURL := generateShortURL(originalURL)
+		shortURL := urlShortener.GenerateShortURL(originalURL)
 		store.Set(shortURL, originalURL)
 
 		shortenedURL := cfg.BaseURL + "/" + shortURL

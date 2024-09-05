@@ -6,12 +6,13 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/learies/go-url-shortener/config"
 	"github.com/learies/go-url-shortener/internal/handlers"
+	"github.com/learies/go-url-shortener/internal/shortener"
 	"github.com/learies/go-url-shortener/internal/store"
 )
 
-func NewRouter(store *store.URLStore, cfg *config.Config) http.Handler {
+func NewRouter(store *store.URLStore, cfg *config.Config, urlShortener *shortener.URLShortener) http.Handler {
 	r := chi.NewRouter()
-	r.Post("/", handlers.PostHandler(store, cfg))
+	r.Post("/", handlers.PostHandler(store, cfg, urlShortener))
 	r.Get("/*", handlers.GetHandler(store))
 
 	r.MethodNotAllowed(methodNotAllowedHandler)
