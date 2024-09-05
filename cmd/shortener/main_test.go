@@ -11,13 +11,15 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/learies/go-url-shortener/config"
+	"github.com/learies/go-url-shortener/internal/router"
+	"github.com/learies/go-url-shortener/internal/store"
 )
 
 func TestMainHandler(t *testing.T) {
-	cfg = config.ParseConfig()
+	cfg := config.ParseConfig()
 	cfg.BaseURL = "http://localhost:8080"
 
-	store := NewURLStore()
+	store := store.NewURLStore()
 
 	tests := []struct {
 		name           string
@@ -70,9 +72,7 @@ func TestMainHandler(t *testing.T) {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(methodNotAllowedHandler)
-	r.Post("/", postHandler(store))
-	r.Get("/*", getHandler(store))
+	r.Mount("/", router.NewRouter(store, cfg))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
