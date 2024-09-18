@@ -10,7 +10,7 @@ import (
 	"github.com/learies/go-url-shortener/internal/store"
 )
 
-func PostHandler(store *store.URLStore, cfg *config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
+func PostHandler(store *store.URLStore, cfg config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {

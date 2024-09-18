@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	cfg := config.ParseConfig()
+	cfg := config.LoadConfig()
 	store := store.NewURLStore()
 
 	urlShortener := shortener.NewURLShortener()

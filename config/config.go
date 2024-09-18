@@ -2,46 +2,38 @@ package config
 
 import (
 	"flag"
-
-	"github.com/caarlos0/env/v6"
+	"os"
 )
 
-const (
-	DefaultAddress = ":8080"
-	DefaultBaseURL = "http://localhost:8080"
-)
-
-// Config структура, которая хранит аргументы командной строки и переменные окружения
 type Config struct {
-	Address string `env:"SERVER_ADDRESS"`
-	BaseURL string `env:"BASE_URL"`
+	Address string
+	BaseURL string
 }
 
-// ParseConfig функция для разбора аргументов командной строки и переменных окружения
-func ParseConfig() *Config {
-	cfg := &Config{
-		Address: DefaultAddress,
-		BaseURL: DefaultBaseURL,
+func getEnv(key, defaultValue string) string {
+	value, exists := os.LookupEnv(key)
+	if !exists {
+		return defaultValue
 	}
+	return value
+}
 
-	// Парсинг переменных окружения
-	if err := env.Parse(cfg); err != nil {
-		panic(err)
-	}
+func LoadConfig() Config {
+	// Значения по умолчанию
+	defaultAddress := "localhost:8080"
+	defaultBaseURL := "http://localhost:8080"
 
-	// Парсинг флагов командной строки
-	addressFlag := flag.String("a", cfg.Address, "Address to start the HTTP server")
-	baseURLFlag := flag.String("b", cfg.BaseURL, "Base URL for the shortened URL")
+	// Чтение из переменных окружения
+	envAddress := getEnv("SERVER_ADDRESS", defaultAddress)
+	envBaseURL := getEnv("BASE_URL", defaultBaseURL)
+
+	// Чтение из флагов командной строки
+	address := flag.String("a", envAddress, "address to start the HTTP server")
+	baseURL := flag.String("b", envBaseURL, "base URL for shortened URLs")
 	flag.Parse()
 
-	// Приоритизация: если флаги командной строки не заданы, оставляем значения из env
-	if addressFlag != nil && *addressFlag != DefaultAddress {
-		cfg.Address = *addressFlag
+	return Config{
+		Address: *address,
+		BaseURL: *baseURL,
 	}
-
-	if baseURLFlag != nil && *baseURLFlag != DefaultBaseURL {
-		cfg.BaseURL = *baseURLFlag
-	}
-
-	return cfg
 }

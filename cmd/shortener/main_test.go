@@ -17,7 +17,7 @@ import (
 )
 
 func TestMainHandler(t *testing.T) {
-	cfg := config.ParseConfig()
+	cfg := config.LoadConfig()
 	cfg.BaseURL = "http://localhost:8080"
 
 	store := store.NewURLStore()
