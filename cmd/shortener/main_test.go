@@ -12,17 +12,11 @@ import (
 
 	"github.com/learies/go-url-shortener/config"
 	"github.com/learies/go-url-shortener/internal/router"
-	"github.com/learies/go-url-shortener/internal/shortener"
-	"github.com/learies/go-url-shortener/internal/store"
 )
 
 func TestMainHandler(t *testing.T) {
 	cfg := config.LoadConfig()
 	cfg.BaseURL = "http://localhost:8080"
-
-	store := store.NewURLStore()
-
-	urlShortener := shortener.NewURLShortener()
 
 	tests := []struct {
 		name           string
@@ -75,7 +69,7 @@ func TestMainHandler(t *testing.T) {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Mount("/", router.NewRouter(store, cfg, urlShortener))
+	r.Mount("/", router.NewRouter(cfg))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
