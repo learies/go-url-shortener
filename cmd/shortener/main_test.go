@@ -89,7 +89,7 @@ func TestMainHandler(t *testing.T) {
 	})
 
 	t.Run("POST /api/shorten valid URL", func(t *testing.T) {
-		requestBody, _ := json.Marshal(models.Request{Url: "http://example.com"})
+		requestBody, _ := json.Marshal(models.Request{URL: "http://example.com"})
 		req, err := http.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(requestBody))
 		assert.NoError(t, err)
 
