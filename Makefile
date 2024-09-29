@@ -4,7 +4,7 @@ BINARY_NAME=shortener
 # Define the build directory
 BUILD_DIR=cmd/shortener
 
-.PHONY: all clean run
+.PHONY: all clean run run_with_flag
 
 # Default target
 all: build
@@ -16,6 +16,10 @@ build:
 # Run the Go binary
 run: build
 	./$(BUILD_DIR)/$(BINARY_NAME)
+
+# Run the Go binary with the file storage flag
+run_with_flag:
+	cd $(BUILD_DIR) && go run . -f ../../urls.json
 
 # Clean the build artifacts
 clean:

@@ -11,7 +11,7 @@ import (
 )
 
 func NewRouter(cfg config.Config) http.Handler {
-	store := store.NewURLStore()
+	store := store.NewURLStore(cfg.FileStoragePath)
 	urlShortener := shortener.NewURLShortener()
 
 	r := chi.NewRouter()
