@@ -31,7 +31,7 @@ func PostAPIHandler(store *store.URLStore, cfg config.Config, urlShortener *shor
 			return
 		}
 
-		originalURL := string(request.Url)
+		originalURL := string(request.URL)
 		if !strings.HasPrefix(originalURL, "http://") && !strings.HasPrefix(originalURL, "https://") {
 			http.Error(w, "Invalid URL format", http.StatusBadRequest)
 			return
