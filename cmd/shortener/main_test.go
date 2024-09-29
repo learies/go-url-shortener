@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/learies/go-url-shortener/config"
+	"github.com/learies/go-url-shortener/internal/models"
 	"github.com/learies/go-url-shortener/internal/router"
 )
 
@@ -18,117 +21,113 @@ func TestMainHandler(t *testing.T) {
 	cfg := config.LoadConfig()
 	cfg.BaseURL = "http://localhost:8080"
 
-	tests := []struct {
-		name           string
-		method         string
-		body           string
-		url            string
-		expectedCode   int
-		expectedHeader string
-		expectedBody   string
-	}{
-		{
-			name:           "POST valid URL",
-			method:         http.MethodPost,
-			body:           "http://example.com",
-			url:            "/",
-			expectedCode:   http.StatusCreated,
-			expectedHeader: "Content-Type",
-			expectedBody:   "http://localhost:8080/",
-		},
-		{
-			name:         "POST invalid URL",
-			method:       http.MethodPost,
-			body:         "invalid-url",
-			url:          "/",
-			expectedCode: http.StatusBadRequest,
-		},
-		{
-			name:         "GET existing short URL",
-			method:       http.MethodGet,
-			body:         "http://example.com",
-			url:          "/{id}",
-			expectedCode: http.StatusTemporaryRedirect,
-		},
-		{
-			name:         "GET non-existing short URL",
-			method:       http.MethodGet,
-			body:         "",
-			url:          "/nonexisting",
-			expectedCode: http.StatusNotFound,
-		},
-		{
-			name:         "Method Not Allowed",
-			method:       http.MethodPut,
-			body:         "",
-			url:          "/",
-			expectedCode: http.StatusMethodNotAllowed,
-		},
-	}
-
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Mount("/", router.NewRouter(cfg))
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	t.Run("POST valid URL", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodPost, "/", strings.NewReader("http://example.com"))
+		assert.NoError(t, err)
 
-			// Для метода POST
-			if tt.method == http.MethodPost {
-				req, err := http.NewRequest(tt.method, tt.url, strings.NewReader(tt.body))
-				assert.NoError(t, err)
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
 
-				rec := httptest.NewRecorder()
-				r.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusCreated, rec.Code)
+		assert.Contains(t, rec.Header().Get("Content-Type"), "text/plain")
+		assert.Contains(t, rec.Body.String(), "http://localhost:8080/")
+	})
 
-				assert.Equal(t, tt.expectedCode, rec.Code)
+	t.Run("POST invalid URL", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodPost, "/", strings.NewReader("invalid-url"))
+		assert.NoError(t, err)
 
-				if tt.expectedHeader != "" {
-					assert.Equal(t, tt.expectedBody[:len(tt.expectedBody)-1], rec.Body.String()[:len(tt.expectedBody)-1])
-				}
-			}
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
 
-			// Для метода GET
-			if tt.method == http.MethodGet {
-				if tt.body != "" {
-					// Сначала создаем короткий URL
-					reqPost, err := http.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
-					assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
 
-					recPost := httptest.NewRecorder()
-					r.ServeHTTP(recPost, reqPost)
+	t.Run("GET existing short URL", func(t *testing.T) {
+		// Сначала создаем короткий URL
+		reqPost, err := http.NewRequest(http.MethodPost, "/", strings.NewReader("http://example.com"))
+		assert.NoError(t, err)
 
-					// Извлекаем короткий URL из ответа на POST
-					shortURL := strings.TrimPrefix(recPost.Body.String(), cfg.BaseURL+"/")
-					req, err := http.NewRequest(tt.method, "/"+shortURL, nil)
-					assert.NoError(t, err)
+		recPost := httptest.NewRecorder()
+		r.ServeHTTP(recPost, reqPost)
 
-					rec := httptest.NewRecorder()
-					r.ServeHTTP(rec, req)
+		// Извлекаем короткий URL из ответа на POST
+		shortURL := strings.TrimPrefix(recPost.Body.String(), cfg.BaseURL+"/")
 
-					assert.Equal(t, tt.expectedCode, rec.Code)
-				} else {
-					req, err := http.NewRequest(tt.method, tt.url, nil)
-					assert.NoError(t, err)
+		req, err := http.NewRequest(http.MethodGet, "/"+shortURL, nil)
+		assert.NoError(t, err)
 
-					rec := httptest.NewRecorder()
-					r.ServeHTTP(rec, req)
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
 
-					assert.Equal(t, tt.expectedCode, rec.Code)
-				}
-			}
+		assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
+	})
 
-			// Для других методов (например, PUT)
-			if tt.method != http.MethodPost && tt.method != http.MethodGet {
-				req, err := http.NewRequest(tt.method, tt.url, nil)
-				assert.NoError(t, err)
+	t.Run("GET non-existing short URL", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, "/nonexisting", nil)
+		assert.NoError(t, err)
 
-				rec := httptest.NewRecorder()
-				r.ServeHTTP(rec, req)
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
 
-				assert.Equal(t, tt.expectedCode, rec.Code)
-			}
-		})
-	}
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+
+	t.Run("Method Not Allowed", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodPut, "/", nil)
+		assert.NoError(t, err)
+
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusMethodNotAllowed, rec.Code)
+	})
+
+	t.Run("POST /api/shorten valid URL", func(t *testing.T) {
+		requestBody, _ := json.Marshal(models.Request{Url: "http://example.com"})
+		req, err := http.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(requestBody))
+		assert.NoError(t, err)
+
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusCreated, rec.Code)
+		assert.Contains(t, rec.Header().Get("Content-Type"), "application/json")
+	})
+
+	t.Run("POST /api/shorten invalid URL", func(t *testing.T) {
+		requestBody, _ := json.Marshal(models.Request{Url: "invalid-url"})
+		req, err := http.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(requestBody))
+		assert.NoError(t, err)
+
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	t.Run("POST /api/shorten invalid JSON", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader("{invalid-json}"))
+		assert.NoError(t, err)
+
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	t.Run("POST /api/shorten empty body", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodPost, "/api/shorten", nil)
+		assert.NoError(t, err)
+
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
 }
