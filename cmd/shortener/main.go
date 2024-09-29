@@ -10,6 +10,7 @@ import (
 
 	"github.com/learies/go-url-shortener/config"
 	"github.com/learies/go-url-shortener/internal/logger"
+	"github.com/learies/go-url-shortener/internal/middlewares"
 	"github.com/learies/go-url-shortener/internal/router"
 )
 
@@ -22,6 +23,7 @@ func main() {
 	r.Use(middleware.Recoverer)
 	// r.Use(middleware.Logger)
 	r.Use(logger.WithLogging(log))
+	r.Use(middlewares.GzipMiddleware)
 	r.Mount("/", router.NewRouter(cfg))
 
 	log.Info("Starting server...", slog.String("address", cfg.Address))
