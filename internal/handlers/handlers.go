@@ -12,7 +12,7 @@ import (
 	"github.com/learies/go-url-shortener/internal/store"
 )
 
-func PostApiHandler(store *store.URLStore, cfg config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
+func PostAPIHandler(store *store.URLStore, cfg config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Body == nil {
 			http.Error(w, "Empty request body", http.StatusBadRequest)
