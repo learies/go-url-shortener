@@ -23,7 +23,7 @@ func LoadConfig() Config {
 	// Default values
 	defaultAddress := "localhost:8080"
 	defaultBaseURL := "http://localhost:8080"
-	defaultFileStoragePath := "./urls.json"
+	var defaultFileStoragePath string
 
 	// Read from environment variables
 	envAddress := getEnv("SERVER_ADDRESS", defaultAddress)
