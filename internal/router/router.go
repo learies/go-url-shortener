@@ -11,11 +11,12 @@ import (
 )
 
 func NewRouter(cfg config.Config) http.Handler {
-	store := store.NewURLStore()
+	store := store.NewURLStore(cfg.FileStoragePath)
 	urlShortener := shortener.NewURLShortener()
 
 	r := chi.NewRouter()
 	r.Post("/", handlers.PostHandler(store, cfg, urlShortener))
+	r.Post("/api/shorten", handlers.PostAPIHandler(store, cfg, urlShortener))
 	r.Get("/*", handlers.GetHandler(store))
 
 	r.MethodNotAllowed(methodNotAllowedHandler)
