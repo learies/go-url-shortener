@@ -2,20 +2,19 @@ package router
 
 import (
 	"database/sql"
-	"log/slog"
 	"net/http"
 	"os"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/learies/go-url-shortener/config"
 	"github.com/learies/go-url-shortener/internal/handlers"
 	"github.com/learies/go-url-shortener/internal/logger"
-	"github.com/learies/go-url-shortener/internal/middlewares"
+	internalMiddleware "github.com/learies/go-url-shortener/internal/middleware"
 	"github.com/learies/go-url-shortener/internal/shortener"
 	"github.com/learies/go-url-shortener/internal/store"
-
-	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func connectToDB(dsn string) (*sql.DB, error) {
@@ -33,15 +32,15 @@ func NewRouter(cfg config.Config) http.Handler {
 
 	db, err := connectToDB(cfg.DatabaseDSN)
 	if err != nil {
-		slog.Error("Error opening database connection", "err", err)
+		logger.Log.Error("Error opening database connection", "err", err)
 		os.Exit(1)
 	}
 
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
 	// r.Use(middleware.Logger)
-	r.Use(logger.WithLogging(slog.New(slog.NewJSONHandler(os.Stdout, nil))))
-	r.Use(middlewares.GzipMiddleware)
+	r.Use(internalMiddleware.WithLogging)
+	r.Use(internalMiddleware.GzipMiddleware)
 
 	r.Post("/", handlers.PostHandler(store, cfg, urlShortener))
 	r.Post("/api/shorten", handlers.PostAPIHandler(store, cfg, urlShortener))
