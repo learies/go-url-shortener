@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -93,5 +94,17 @@ func GetHandler(store *store.URLStore) http.HandlerFunc {
 
 		w.Header().Set("Location", originalURL)
 		w.WriteHeader(http.StatusTemporaryRedirect)
+	}
+}
+
+func PingHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := db.Ping(); err != nil {
+			http.Error(w, "Database is not available", http.StatusInternalServerError)
+			return
+		}
+
+		w.Write([]byte("Successfully connected to the database"))
+		w.WriteHeader(http.StatusOK)
 	}
 }

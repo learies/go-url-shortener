@@ -2,9 +2,10 @@ package store
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"sync"
+
+	"github.com/learies/go-url-shortener/internal/logger"
 )
 
 type URLStore struct {
@@ -37,8 +38,8 @@ func NewURLStore(filePath string) *URLStore {
 
 func (store *URLStore) Set(shortURL, originalURL string) {
 	store.urlMapping[shortURL] = originalURL
-	fmt.Println("Saving URLMapping:", shortURL, originalURL)
-	fmt.Println("Filepath:", store.filePath)
+	logger.Log.Info("Saving URLMapping", "shortURL", shortURL, "originalURL", originalURL)
+	logger.Log.Info("Store", "filePath:", store.filePath)
 	store.SaveToFile(store.filePath)
 }
 
@@ -62,7 +63,7 @@ func (store *URLStore) SaveToFile(filePath string) error {
 	// Кодируем URL-маппинг в JSON и записываем в файл
 	encoder := json.NewEncoder(file)
 	for shortURL, originalURL := range store.urlMapping {
-		fmt.Println("Encoding URLMapping:", shortURL, originalURL)
+		logger.Log.Info("Encoding URLMapping", "shortURL", shortURL, "originalURL", originalURL)
 		if err := encoder.Encode(URLMapping{ShortURL: shortURL, OriginalURL: originalURL}); err != nil {
 			return err
 		}
