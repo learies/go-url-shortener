@@ -19,13 +19,14 @@ import (
 
 func TestMainHandler(t *testing.T) {
 
-	err := logger.Initialize("debug")
+	cfg := config.LoadConfig()
+
+	err := logger.Initialize(cfg.LogLevel)
 	if err != nil {
 		log.Println("Error initializing logger", "err", err)
 		return
 	}
 
-	cfg := config.LoadConfig()
 	cfg.BaseURL = "http://localhost:8080"
 
 	r := router.NewRouter(cfg)

@@ -11,13 +11,13 @@ import (
 )
 
 func main() {
-	err := logger.Initialize("info")
+	cfg := config.LoadConfig()
+
+	err := logger.Initialize(cfg.LogLevel)
 	if err != nil {
 		log.Println("Error initializing logger", "err", err)
 		return
 	}
-
-	cfg := config.LoadConfig()
 
 	r := router.NewRouter(cfg)
 
