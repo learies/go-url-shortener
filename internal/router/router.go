@@ -9,7 +9,6 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/learies/go-url-shortener/config"
-	"github.com/learies/go-url-shortener/internal/database"
 	"github.com/learies/go-url-shortener/internal/handlers"
 	"github.com/learies/go-url-shortener/internal/logger"
 	internalMiddleware "github.com/learies/go-url-shortener/internal/middleware"
@@ -18,25 +17,23 @@ import (
 )
 
 func NewRouter(cfg config.Config) http.Handler {
-	store := store.NewURLStore(cfg.FileStoragePath)
-	urlShortener := shortener.NewURLShortener()
-
-	db, err := database.Connect(cfg.DatabaseDSN)
+	store, err := store.NewStore(cfg)
 	if err != nil {
-		logger.Log.Error("Error opening database connection", "err", err)
+		logger.Log.Error("Error creating store", "err", err)
 		os.Exit(1)
 	}
 
+	urlShortener := shortener.NewURLShortener()
+
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
-	// r.Use(middleware.Logger)
 	r.Use(internalMiddleware.WithLogging)
 	r.Use(internalMiddleware.GzipMiddleware)
 
 	r.Post("/", handlers.PostHandler(store, cfg, urlShortener))
 	r.Post("/api/shorten", handlers.PostAPIHandler(store, cfg, urlShortener))
 	r.Get("/*", handlers.GetHandler(store))
-	r.Get("/ping", handlers.PingHandler(db))
+	r.Get("/ping", handlers.PingHandler(store))
 
 	r.MethodNotAllowed(methodNotAllowedHandler)
 

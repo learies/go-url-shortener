@@ -22,11 +22,11 @@ func Connect(dsn string) (*sql.DB, error) {
 func initialize(db *sql.DB) error {
 	query := `
 	CREATE TABLE IF NOT EXISTS urls (
-		id SERIAL PRIMARY KEY,
-		short_url VARCHAR(8) NOT NULL,
-		original_url TEXT NOT NULL,
-		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-	);`
+        id SERIAL PRIMARY KEY,
+        short_url VARCHAR(8) NOT NULL UNIQUE,
+        original_url TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );`
 
 	_, err := db.Exec(query)
 	if err != nil {

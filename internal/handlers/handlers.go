@@ -1,19 +1,19 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
 
 	"github.com/learies/go-url-shortener/config"
+	"github.com/learies/go-url-shortener/internal/logger"
 	"github.com/learies/go-url-shortener/internal/models"
 	"github.com/learies/go-url-shortener/internal/shortener"
 	"github.com/learies/go-url-shortener/internal/store"
 )
 
-func PostAPIHandler(store *store.URLStore, cfg config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
+func PostAPIHandler(store store.Store, cfg config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Body == nil {
 			http.Error(w, "Empty request body", http.StatusBadRequest)
@@ -57,8 +57,9 @@ func PostAPIHandler(store *store.URLStore, cfg config.Config, urlShortener *shor
 	}
 }
 
-func PostHandler(store *store.URLStore, cfg config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
+func PostHandler(store store.Store, cfg config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, "Unable to read the request body", http.StatusInternalServerError)
@@ -82,7 +83,7 @@ func PostHandler(store *store.URLStore, cfg config.Config, urlShortener *shorten
 	}
 }
 
-func GetHandler(store *store.URLStore) http.HandlerFunc {
+func GetHandler(store store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := strings.TrimPrefix(r.URL.Path, "/")
 
@@ -97,14 +98,16 @@ func GetHandler(store *store.URLStore) http.HandlerFunc {
 	}
 }
 
-func PingHandler(db *sql.DB) http.HandlerFunc {
+// PingHandler проверяет доступность хранилища URL
+func PingHandler(store store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := db.Ping(); err != nil {
-			http.Error(w, "Database is not available", http.StatusInternalServerError)
+		if err := store.Ping(); err != nil {
+			http.Error(w, "Store is not available", http.StatusInternalServerError)
+			logger.Log.Error("Store ping failed", "error", err)
 			return
 		}
 
-		w.Write([]byte("Successfully connected to the database"))
 		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Successfully connected to the store"))
 	}
 }
