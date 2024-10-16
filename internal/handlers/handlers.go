@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/learies/go-url-shortener/config"
 	"github.com/learies/go-url-shortener/internal/logger"
@@ -15,6 +17,9 @@ import (
 
 func PostAPIHandler(store store.Store, cfg config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second*10)
+		defer cancel()
+
 		if r.Body == nil {
 			http.Error(w, "Empty request body", http.StatusBadRequest)
 			return
@@ -39,7 +44,7 @@ func PostAPIHandler(store store.Store, cfg config.Config, urlShortener *shortene
 		}
 
 		shortURL := urlShortener.GenerateShortURL(originalURL)
-		store.Set(shortURL, originalURL)
+		store.Set(ctx, shortURL, originalURL)
 		shortenedURL := cfg.BaseURL + "/" + shortURL
 
 		var response models.Response
@@ -59,6 +64,8 @@ func PostAPIHandler(store store.Store, cfg config.Config, urlShortener *shortene
 
 func PostHandler(store store.Store, cfg config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second*10)
+		defer cancel()
 
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -74,7 +81,7 @@ func PostHandler(store store.Store, cfg config.Config, urlShortener *shortener.U
 		}
 
 		shortURL := urlShortener.GenerateShortURL(originalURL)
-		store.Set(shortURL, originalURL)
+		store.Set(ctx, shortURL, originalURL)
 
 		shortenedURL := cfg.BaseURL + "/" + shortURL
 		w.Header().Set("Content-Type", "text/plain")
@@ -85,9 +92,12 @@ func PostHandler(store store.Store, cfg config.Config, urlShortener *shortener.U
 
 func GetHandler(store store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second*10)
+		defer cancel()
+
 		id := strings.TrimPrefix(r.URL.Path, "/")
 
-		originalURL, exists := store.Get(id)
+		originalURL, exists := store.Get(ctx, id)
 		if !exists {
 			http.Error(w, "URL not found", http.StatusNotFound)
 			return
