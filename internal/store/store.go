@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"os"
 	"sync"
 
@@ -94,7 +95,8 @@ func (store *URLStore) LoadFromFile(filePath string) error {
 
 // Ping проверяет доступность хранилища URL
 func (store *URLStore) Ping() error {
-	return nil // Файловое хранилище всегда доступно
+	err := errors.New("unable to access the store")
+	return err
 }
 
 // DBStore хранение URL в базе данных
