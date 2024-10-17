@@ -1,19 +1,25 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/learies/go-url-shortener/config"
+	"github.com/learies/go-url-shortener/internal/logger"
 	"github.com/learies/go-url-shortener/internal/models"
 	"github.com/learies/go-url-shortener/internal/shortener"
 	"github.com/learies/go-url-shortener/internal/store"
 )
 
-func PostAPIHandler(store *store.URLStore, cfg config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
+func PostAPIHandler(store store.Store, cfg config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second*10)
+		defer cancel()
+
 		if r.Body == nil {
 			http.Error(w, "Empty request body", http.StatusBadRequest)
 			return
@@ -38,7 +44,7 @@ func PostAPIHandler(store *store.URLStore, cfg config.Config, urlShortener *shor
 		}
 
 		shortURL := urlShortener.GenerateShortURL(originalURL)
-		store.Set(shortURL, originalURL)
+		store.Set(ctx, shortURL, originalURL)
 		shortenedURL := cfg.BaseURL + "/" + shortURL
 
 		var response models.Response
@@ -56,8 +62,57 @@ func PostAPIHandler(store *store.URLStore, cfg config.Config, urlShortener *shor
 	}
 }
 
-func PostHandler(store *store.URLStore, cfg config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
+func PostAPIBatchHandler(store store.Store, cfg config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second*10)
+		defer cancel()
+
+		if r.Body == nil {
+			http.Error(w, "Empty request body", http.StatusBadRequest)
+			return
+		}
+
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Unable to read the request body", http.StatusInternalServerError)
+			return
+		}
+
+		var requests []models.BatchURLRequest
+		if err = json.Unmarshal(body, &requests); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		var responses []models.BatchURLResponse
+		for _, request := range requests {
+			shortURL := urlShortener.GenerateShortURL(request.OriginalURL)
+			responses = append(responses, models.BatchURLResponse{
+				CorrelationID: request.CorrelationID,
+				ShortURL:      shortURL,
+				OriginalURL:   request.OriginalURL,
+			})
+		}
+
+		store.SetBatch(ctx, responses)
+
+		result, err := json.Marshal(responses)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		w.Write(result)
+	}
+}
+
+func PostHandler(store store.Store, cfg config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second*10)
+		defer cancel()
+
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, "Unable to read the request body", http.StatusInternalServerError)
@@ -72,7 +127,7 @@ func PostHandler(store *store.URLStore, cfg config.Config, urlShortener *shorten
 		}
 
 		shortURL := urlShortener.GenerateShortURL(originalURL)
-		store.Set(shortURL, originalURL)
+		store.Set(ctx, shortURL, originalURL)
 
 		shortenedURL := cfg.BaseURL + "/" + shortURL
 		w.Header().Set("Content-Type", "text/plain")
@@ -81,11 +136,14 @@ func PostHandler(store *store.URLStore, cfg config.Config, urlShortener *shorten
 	}
 }
 
-func GetHandler(store *store.URLStore) http.HandlerFunc {
+func GetHandler(store store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second*10)
+		defer cancel()
+
 		id := strings.TrimPrefix(r.URL.Path, "/")
 
-		originalURL, exists := store.Get(id)
+		originalURL, exists := store.Get(ctx, id)
 		if !exists {
 			http.Error(w, "URL not found", http.StatusNotFound)
 			return
@@ -93,5 +151,19 @@ func GetHandler(store *store.URLStore) http.HandlerFunc {
 
 		w.Header().Set("Location", originalURL)
 		w.WriteHeader(http.StatusTemporaryRedirect)
+	}
+}
+
+// PingHandler проверяет доступность хранилища URL
+func PingHandler(store store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := store.Ping(); err != nil {
+			http.Error(w, "Store is not available", http.StatusInternalServerError)
+			logger.Log.Error("Store ping failed", "error", err)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Successfully connected to the store"))
 	}
 }
