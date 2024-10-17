@@ -3,28 +3,33 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/learies/go-url-shortener/config"
+	"github.com/learies/go-url-shortener/internal/logger"
 	"github.com/learies/go-url-shortener/internal/models"
 	"github.com/learies/go-url-shortener/internal/router"
 )
 
 func TestMainHandler(t *testing.T) {
+
 	cfg := config.LoadConfig()
+
+	err := logger.Initialize(cfg.LogLevel)
+	if err != nil {
+		log.Println("Error initializing logger", "err", err)
+		return
+	}
+
 	cfg.BaseURL = "http://localhost:8080"
 
-	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Mount("/", router.NewRouter(cfg))
+	r := router.NewRouter(cfg)
 
 	t.Run("POST valid URL", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodPost, "/", strings.NewReader("http://example.com"))
