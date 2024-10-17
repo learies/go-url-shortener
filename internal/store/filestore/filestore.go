@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/learies/go-url-shortener/internal/logger"
+	"github.com/learies/go-url-shortener/internal/models"
 )
 
 // URLStore хранение URL в файле
@@ -40,6 +41,17 @@ func (store *FileStore) Get(ctx context.Context, shortURL string) (string, bool)
 	store.LoadFromFile(store.FilePath)
 	originalURL, exists := store.URLMapping[shortURL]
 	return originalURL, exists
+}
+
+// SetBatch сохраняет URL в память и файл
+func (store *FileStore) SetBatch(ctx context.Context, shortURLS []models.BatchURLResponse) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	for _, urlMapping := range shortURLS {
+		store.URLMapping[urlMapping.ShortURL] = urlMapping.OriginalURL
+		logger.Log.Info("Saving URLMapping", "shortURL", urlMapping.ShortURL, "originalURL", urlMapping.OriginalURL)
+	}
+	store.SaveToFile(store.FilePath)
 }
 
 // SaveToFile сохраняет URL-маппинг в JSON файл

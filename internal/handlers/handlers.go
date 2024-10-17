@@ -62,6 +62,52 @@ func PostAPIHandler(store store.Store, cfg config.Config, urlShortener *shortene
 	}
 }
 
+func PostAPIBatchHandler(store store.Store, cfg config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second*10)
+		defer cancel()
+
+		if r.Body == nil {
+			http.Error(w, "Empty request body", http.StatusBadRequest)
+			return
+		}
+
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Unable to read the request body", http.StatusInternalServerError)
+			return
+		}
+
+		var requests []models.BatchURLRequest
+		if err = json.Unmarshal(body, &requests); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		var responses []models.BatchURLResponse
+		for _, request := range requests {
+			shortURL := urlShortener.GenerateShortURL(request.OriginalURL)
+			responses = append(responses, models.BatchURLResponse{
+				CorrelationID: request.CorrelationID,
+				ShortURL:      shortURL,
+				OriginalURL:   request.OriginalURL,
+			})
+		}
+
+		store.SetBatch(ctx, responses)
+
+		result, err := json.Marshal(responses)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		w.Write(result)
+	}
+}
+
 func PostHandler(store store.Store, cfg config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), time.Second*10)

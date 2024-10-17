@@ -3,8 +3,11 @@ package dbstore
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/learies/go-url-shortener/internal/logger"
+	"github.com/learies/go-url-shortener/internal/models"
 )
 
 // DBStore хранение URL в базе данных
@@ -14,7 +17,14 @@ type DBStore struct {
 
 // Set сохраняет URL в базу данных
 func (ds *DBStore) Set(ctx context.Context, shortURL, originalURL string) {
-	_, err := ds.DB.ExecContext(ctx, "INSERT INTO urls (short_url, original_url) VALUES ($1, $2) ON CONFLICT (short_url) DO UPDATE SET original_url = $2", shortURL, originalURL)
+	id := uuid.New()
+
+	query := `
+	INSERT INTO urls (id, short_url, original_url)
+	VALUES ($1, $2, $3)
+	ON CONFLICT (short_url) DO UPDATE SET original_url = EXCLUDED.original_url;`
+
+	_, err := ds.DB.ExecContext(ctx, query, id, shortURL, originalURL)
 	if err != nil {
 		logger.Log.Error("Failed to set URL mapping in database", "error", err)
 	}
@@ -32,6 +42,41 @@ func (ds *DBStore) Get(ctx context.Context, shortURL string) (string, bool) {
 		return "", false
 	}
 	return originalURL, true
+}
+
+// SetBatch сохраняет пакет URL в базе данных
+func (ds *DBStore) SetBatch(ctx context.Context, responses []models.BatchURLResponse) {
+	if len(responses) == 0 {
+		return
+	}
+
+	var (
+		queryValues string
+		args        []interface{}
+	)
+
+	query := `
+    INSERT INTO urls (id, short_url, original_url)
+    VALUES %s
+    ON CONFLICT (short_url) DO UPDATE SET original_url = EXCLUDED.original_url;`
+
+	for i, response := range responses {
+		// Создание плейсхолдера для каждой строки
+		// ($1, $2, $3), ($4, $5, $6), ...
+		placeholder := fmt.Sprintf("($%d, $%d, $%d)", (i*3)+1, (i*3)+2, (i*3)+3)
+		queryValues += placeholder
+		if i < len(responses)-1 {
+			queryValues += ", "
+		}
+
+		args = append(args, response.CorrelationID, response.ShortURL, response.OriginalURL)
+	}
+
+	fullQuery := fmt.Sprintf(query, queryValues)
+	_, err := ds.DB.ExecContext(ctx, fullQuery, args...)
+	if err != nil {
+		logger.Log.Error("Failed to set URL mapping in database", "error", err)
+	}
 }
 
 // Ping проверяет доступность базы данных

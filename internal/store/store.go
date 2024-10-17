@@ -6,6 +6,7 @@ import (
 
 	"github.com/learies/go-url-shortener/config"
 	"github.com/learies/go-url-shortener/internal/database"
+	"github.com/learies/go-url-shortener/internal/models"
 	"github.com/learies/go-url-shortener/internal/store/dbstore"
 	"github.com/learies/go-url-shortener/internal/store/filestore"
 )
@@ -14,6 +15,7 @@ import (
 type Store interface {
 	Set(ctx context.Context, shortURL, originalURL string)
 	Get(ctx context.Context, shortURL string) (string, bool)
+	SetBatch(ctx context.Context, shortURLS []models.BatchURLResponse)
 	Ping() error
 }
 
