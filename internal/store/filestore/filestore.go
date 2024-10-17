@@ -12,7 +12,7 @@ import (
 
 // URLStore хранение URL в файле
 type FileStore struct {
-	UrlMapping map[string]string
+	URLMapping map[string]string
 	FilePath   string
 	mu         sync.Mutex
 }
@@ -27,7 +27,7 @@ type URLMapping struct {
 func (store *FileStore) Set(ctx context.Context, shortURL, originalURL string) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
-	store.UrlMapping[shortURL] = originalURL
+	store.URLMapping[shortURL] = originalURL
 	logger.Log.Info("Saving URLMapping", "shortURL", shortURL, "originalURL", originalURL)
 	logger.Log.Info("Store", "filePath:", store.FilePath)
 	store.SaveToFile(store.FilePath)
@@ -38,7 +38,7 @@ func (store *FileStore) Get(ctx context.Context, shortURL string) (string, bool)
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	store.LoadFromFile(store.FilePath)
-	originalURL, exists := store.UrlMapping[shortURL]
+	originalURL, exists := store.URLMapping[shortURL]
 	return originalURL, exists
 }
 
@@ -51,7 +51,7 @@ func (store *FileStore) SaveToFile(filePath string) error {
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
-	for shortURL, originalURL := range store.UrlMapping {
+	for shortURL, originalURL := range store.URLMapping {
 		logger.Log.Info("Encoding URLMapping", "shortURL", shortURL, "originalURL", originalURL)
 		if err := encoder.Encode(URLMapping{ShortURL: shortURL, OriginalURL: originalURL}); err != nil {
 			return err
@@ -78,7 +78,7 @@ func (store *FileStore) LoadFromFile(filePath string) error {
 		if err := decoder.Decode(&urlMapping); err != nil {
 			break
 		}
-		store.UrlMapping[urlMapping.ShortURL] = urlMapping.OriginalURL
+		store.URLMapping[urlMapping.ShortURL] = urlMapping.OriginalURL
 	}
 
 	return nil

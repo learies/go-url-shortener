@@ -31,7 +31,7 @@ func NewStore(cfg config.Config) (Store, error) {
 
 	// Используем файловое хранилище
 	store := &filestore.FileStore{
-		UrlMapping: make(map[string]string),
+		URLMapping: make(map[string]string),
 		FilePath:   cfg.FileStoragePath,
 	}
 
