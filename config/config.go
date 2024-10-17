@@ -26,8 +26,8 @@ func LoadConfig() Config {
 	defaultAddress := "localhost:8080"
 	defaultBaseURL := "http://localhost:8080"
 	var defaultFileStoragePath string
-	defaultDatabaseDSN := "postgres://postgres:postgres@localhost/postgres?sslmode=disable"
-	// var defaultDatabaseDSN string
+	// defaultDatabaseDSN := "postgres://postgres:postgres@localhost/postgres?sslmode=disable"
+	var defaultDatabaseDSN string
 	defaultLevel := "info"
 
 	// Read from environment variables
