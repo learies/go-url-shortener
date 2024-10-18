@@ -85,16 +85,21 @@ func PostAPIBatchHandler(store store.Store, cfg config.Config, urlShortener *sho
 		}
 
 		var responses []models.BatchURLResponse
+		var batchWrites []models.BatchURLWrite
 		for _, request := range requests {
 			shortURL := urlShortener.GenerateShortURL(request.OriginalURL)
 			responses = append(responses, models.BatchURLResponse{
+				CorrelationID: request.CorrelationID,
+				ShortURL:      cfg.BaseURL + "/" + shortURL,
+			})
+			batchWrites = append(batchWrites, models.BatchURLWrite{
 				CorrelationID: request.CorrelationID,
 				ShortURL:      shortURL,
 				OriginalURL:   request.OriginalURL,
 			})
 		}
 
-		store.SetBatch(ctx, responses)
+		store.SetBatch(ctx, batchWrites)
 
 		result, err := json.Marshal(responses)
 		if err != nil {

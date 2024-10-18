@@ -44,7 +44,7 @@ func (store *FileStore) Get(ctx context.Context, shortURL string) (string, bool)
 }
 
 // SetBatch сохраняет URL в память и файл
-func (store *FileStore) SetBatch(ctx context.Context, shortURLS []models.BatchURLResponse) {
+func (store *FileStore) SetBatch(ctx context.Context, shortURLS []models.BatchURLWrite) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	for _, urlMapping := range shortURLS {

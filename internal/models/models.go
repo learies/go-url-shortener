@@ -16,5 +16,10 @@ type BatchURLRequest struct {
 type BatchURLResponse struct {
 	CorrelationID string `json:"correlation_id"`
 	ShortURL      string `json:"short_url"`
-	OriginalURL   string `json:"-"`
+}
+
+type BatchURLWrite struct {
+	CorrelationID string `json:"correlation_id"`
+	ShortURL      string `json:"short_url"`
+	OriginalURL   string `json:"original_url"`
 }

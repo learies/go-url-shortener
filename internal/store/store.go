@@ -15,7 +15,7 @@ import (
 type Store interface {
 	Set(ctx context.Context, shortURL, originalURL string)
 	Get(ctx context.Context, shortURL string) (string, bool)
-	SetBatch(ctx context.Context, shortURLS []models.BatchURLResponse)
+	SetBatch(ctx context.Context, shortURLS []models.BatchURLWrite)
 	Ping() error
 }
 

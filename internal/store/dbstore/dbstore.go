@@ -45,8 +45,8 @@ func (ds *DBStore) Get(ctx context.Context, shortURL string) (string, bool) {
 }
 
 // SetBatch сохраняет пакет URL в базе данных
-func (ds *DBStore) SetBatch(ctx context.Context, responses []models.BatchURLResponse) {
-	if len(responses) == 0 {
+func (ds *DBStore) SetBatch(ctx context.Context, urls []models.BatchURLWrite) {
+	if len(urls) == 0 {
 		return
 	}
 
@@ -60,12 +60,12 @@ func (ds *DBStore) SetBatch(ctx context.Context, responses []models.BatchURLResp
     VALUES %s
     ON CONFLICT (short_url) DO UPDATE SET original_url = EXCLUDED.original_url;`
 
-	for i, response := range responses {
+	for i, response := range urls {
 		// Создание плейсхолдера для каждой строки
 		// ($1, $2, $3), ($4, $5, $6), ...
 		placeholder := fmt.Sprintf("($%d, $%d, $%d)", (i*3)+1, (i*3)+2, (i*3)+3)
 		queryValues += placeholder
-		if i < len(responses)-1 {
+		if i < len(urls)-1 {
 			queryValues += ", "
 		}
 
