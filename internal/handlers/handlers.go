@@ -50,6 +50,10 @@ func PostAPIHandler(store store.Store, cfg config.Config, urlShortener *shortene
 		response.Result = cfg.BaseURL + "/" + shortURL
 
 		result, err := json.Marshal(response)
+		if err != nil {
+			http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+			return
+		}
 
 		err = store.Set(ctx, shortURL, originalURL)
 		if err != nil {
