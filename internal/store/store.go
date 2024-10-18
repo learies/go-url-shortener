@@ -1,100 +1,51 @@
 package store
 
 import (
-	"encoding/json"
-	"fmt"
+	"context"
 	"os"
-	"sync"
+
+	"github.com/learies/go-url-shortener/config"
+	"github.com/learies/go-url-shortener/internal/database"
+	"github.com/learies/go-url-shortener/internal/models"
+	"github.com/learies/go-url-shortener/internal/store/dbstore"
+	"github.com/learies/go-url-shortener/internal/store/filestore"
 )
 
-type URLStore struct {
-	urlMapping map[string]string
-	filePath   string
-	mu         sync.Mutex
+// Store интерфейс для хранилища URL
+type Store interface {
+	Set(ctx context.Context, shortURL, originalURL string) error
+	Get(ctx context.Context, shortURL string) (string, bool)
+	SetBatch(ctx context.Context, shortURLS []models.BatchURLWrite)
+	Ping() error
 }
 
-type URLMapping struct {
-	ShortURL    string `json:"short_url"`
-	OriginalURL string `json:"original_url"`
-}
-
-func NewURLStore(filePath string) *URLStore {
-	store := &URLStore{
-		urlMapping: make(map[string]string),
-		filePath:   filePath,
+// NewStore создаёт новое хранилище URL
+func NewStore(cfg config.Config) (Store, error) {
+	if cfg.DatabaseDSN != "" {
+		// Подключение к базе данных
+		db, err := database.Connect(cfg.DatabaseDSN)
+		if err != nil {
+			return nil, err
+		}
+		store := &dbstore.DBStore{DB: db}
+		return store, nil
 	}
-	if store.filePath == "" {
+
+	// Используем файловое хранилище
+	store := &filestore.FileStore{
+		URLMapping: make(map[string]string),
+		FilePath:   cfg.FileStoragePath,
+	}
+
+	if store.FilePath == "" {
+		// Создание временного файла
 		tmpFile, err := os.CreateTemp("/tmp", "urlstore-*.json")
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		defer tmpFile.Close()
-		store.filePath = tmpFile.Name()
+		store.FilePath = tmpFile.Name()
 	}
-	store.LoadFromFile(filePath)
-	return store
-}
-
-func (store *URLStore) Set(shortURL, originalURL string) {
-	store.urlMapping[shortURL] = originalURL
-	fmt.Println("Saving URLMapping:", shortURL, originalURL)
-	fmt.Println("Filepath:", store.filePath)
-	store.SaveToFile(store.filePath)
-}
-
-func (store *URLStore) Get(shortURL string) (string, bool) {
-	store.LoadFromFile(store.filePath)
-	originalURL, exists := store.urlMapping[shortURL]
-	return originalURL, exists
-}
-
-func (store *URLStore) SaveToFile(filePath string) error {
-	store.mu.Lock()
-	defer store.mu.Unlock()
-
-	// Открываем файл для записи в конце файла или создаем новый
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	// Кодируем URL-маппинг в JSON и записываем в файл
-	encoder := json.NewEncoder(file)
-	for shortURL, originalURL := range store.urlMapping {
-		fmt.Println("Encoding URLMapping:", shortURL, originalURL)
-		if err := encoder.Encode(URLMapping{ShortURL: shortURL, OriginalURL: originalURL}); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (store *URLStore) LoadFromFile(filePath string) error {
-	store.mu.Lock()
-	defer store.mu.Unlock()
-
-	// Открываем файл для чтения
-	// Если файл не существует, возвращаем nil
-	file, err := os.Open(filePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-	defer file.Close()
-
-	// Декодируем JSON из файла
-	decoder := json.NewDecoder(file)
-	for {
-		var urlMapping URLMapping
-		if err := decoder.Decode(&urlMapping); err != nil {
-			break
-		}
-		store.urlMapping[urlMapping.ShortURL] = urlMapping.OriginalURL
-	}
-
-	return nil
+	store.LoadFromFile(store.FilePath)
+	return store, nil
 }
