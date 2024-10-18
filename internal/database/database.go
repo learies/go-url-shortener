@@ -24,7 +24,7 @@ func initialize(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS urls (
 		id UUID PRIMARY KEY,
 	    short_url VARCHAR(8) NOT NULL UNIQUE,
-	    original_url TEXT NOT NULL,
+	    original_url TEXT NOT NULL UNIQUE,
 	    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );`
 

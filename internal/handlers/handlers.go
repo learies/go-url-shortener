@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -44,15 +45,18 @@ func PostAPIHandler(store store.Store, cfg config.Config, urlShortener *shortene
 		}
 
 		shortURL := urlShortener.GenerateShortURL(originalURL)
-		store.Set(ctx, shortURL, originalURL)
-		shortenedURL := cfg.BaseURL + "/" + shortURL
 
 		var response models.Response
-		response.Result = shortenedURL
+		response.Result = cfg.BaseURL + "/" + shortURL
 
 		result, err := json.Marshal(response)
+
+		err = store.Set(ctx, shortURL, originalURL)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			logger.Log.Error(fmt.Sprintf("Failed to store URL: %v", err))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusConflict)
+			w.Write(result)
 			return
 		}
 
@@ -132,9 +136,17 @@ func PostHandler(store store.Store, cfg config.Config, urlShortener *shortener.U
 		}
 
 		shortURL := urlShortener.GenerateShortURL(originalURL)
-		store.Set(ctx, shortURL, originalURL)
-
 		shortenedURL := cfg.BaseURL + "/" + shortURL
+
+		err = store.Set(ctx, shortURL, originalURL)
+		if err != nil {
+			logger.Log.Error(fmt.Sprintf("Failed to store URL: %v", err))
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusConflict)
+			w.Write([]byte(shortenedURL))
+			return
+		}
+
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(shortenedURL))

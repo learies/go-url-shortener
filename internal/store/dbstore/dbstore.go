@@ -12,22 +12,24 @@ import (
 
 // DBStore хранение URL в базе данных
 type DBStore struct {
-	DB *sql.DB
+	DB          *sql.DB
+	ErrConflict error
 }
 
 // Set сохраняет URL в базу данных
-func (ds *DBStore) Set(ctx context.Context, shortURL, originalURL string) {
+func (ds *DBStore) Set(ctx context.Context, shortURL, originalURL string) error {
 	id := uuid.New()
 
 	query := `
 	INSERT INTO urls (id, short_url, original_url)
-	VALUES ($1, $2, $3)
-	ON CONFLICT (short_url) DO UPDATE SET original_url = EXCLUDED.original_url;`
+	VALUES ($1, $2, $3)`
+	// ON CONFLICT (short_url) DO UPDATE SET original_url = EXCLUDED.original_url;`
 
 	_, err := ds.DB.ExecContext(ctx, query, id, shortURL, originalURL)
 	if err != nil {
-		logger.Log.Error("Failed to set URL mapping in database", "error", err)
+		return err
 	}
+	return nil
 }
 
 // Get получает URL из базы данных
