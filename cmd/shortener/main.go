@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"os"
 
@@ -15,7 +14,7 @@ func main() {
 
 	err := logger.Initialize(cfg.LogLevel)
 	if err != nil {
-		log.Println("Error initializing logger", "err", err)
+		logger.Log.Error("Error initializing logger", "err", err)
 		return
 	}
 
