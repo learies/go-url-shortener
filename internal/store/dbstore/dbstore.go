@@ -12,8 +12,7 @@ import (
 
 // DBStore хранение URL в базе данных
 type DBStore struct {
-	DB          *sql.DB
-	ErrConflict error
+	DB *sql.DB
 }
 
 // Set сохраняет URL в базу данных
