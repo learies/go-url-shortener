@@ -16,15 +16,15 @@ type DBStore struct {
 }
 
 // Set сохраняет URL в базу данных
-func (ds *DBStore) Set(ctx context.Context, shortURL, originalURL string) error {
+func (ds *DBStore) Set(ctx context.Context, shortURL, originalURL, userID string) error {
 	id := uuid.New()
 
 	query := `
-	INSERT INTO urls (id, short_url, original_url)
-	VALUES ($1, $2, $3)`
+	INSERT INTO urls (id, short_url, original_url, user_id)
+	VALUES ($1, $2, $3, $4)`
 	// ON CONFLICT (short_url) DO UPDATE SET original_url = EXCLUDED.original_url;`
 
-	_, err := ds.DB.ExecContext(ctx, query, id, shortURL, originalURL)
+	_, err := ds.DB.ExecContext(ctx, query, id, shortURL, originalURL, userID)
 	if err != nil {
 		return err
 	}

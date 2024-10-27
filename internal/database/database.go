@@ -25,7 +25,8 @@ func initialize(db *sql.DB) error {
 		id UUID PRIMARY KEY,
 	    short_url VARCHAR(8) NOT NULL UNIQUE,
 	    original_url TEXT NOT NULL UNIQUE,
-	    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+	    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+		user_id UUID NOT NULL
     );`
 
 	_, err := db.Exec(query)

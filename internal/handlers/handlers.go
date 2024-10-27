@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/learies/go-url-shortener/config"
+	"github.com/learies/go-url-shortener/internal/contextutils"
 	"github.com/learies/go-url-shortener/internal/logger"
 	"github.com/learies/go-url-shortener/internal/models"
 	"github.com/learies/go-url-shortener/internal/shortener"
@@ -55,7 +56,14 @@ func PostAPIHandler(store store.Store, cfg config.Config, urlShortener *shortene
 			return
 		}
 
-		err = store.Set(ctx, shortURL, originalURL)
+		// Получим userID из контекста
+		userID, ok := contextutils.GetUserID(ctx)
+		if !ok {
+			http.Error(w, "UserID not found in context", http.StatusUnauthorized)
+			return
+		}
+
+		err = store.Set(ctx, shortURL, originalURL, userID)
 		if err != nil {
 			logger.Log.Error(fmt.Sprintf("Failed to store URL: %v", err))
 			w.Header().Set("Content-Type", "application/json")
@@ -139,10 +147,17 @@ func PostHandler(store store.Store, cfg config.Config, urlShortener *shortener.U
 			return
 		}
 
+		// Получим userID из контекста
+		userID, ok := contextutils.GetUserID(ctx)
+		if !ok {
+			http.Error(w, "UserID not found in context", http.StatusUnauthorized)
+			return
+		}
+
 		shortURL := urlShortener.GenerateShortURL(originalURL)
 		shortenedURL := cfg.BaseURL + "/" + shortURL
 
-		err = store.Set(ctx, shortURL, originalURL)
+		err = store.Set(ctx, shortURL, originalURL, userID)
 		if err != nil {
 			logger.Log.Error(fmt.Sprintf("Failed to store URL: %v", err))
 			w.Header().Set("Content-Type", "text/plain")

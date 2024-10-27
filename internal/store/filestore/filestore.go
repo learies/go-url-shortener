@@ -25,11 +25,11 @@ type URLMapping struct {
 }
 
 // Set сохраняет URL в память и файл
-func (store *FileStore) Set(ctx context.Context, shortURL, originalURL string) error {
+func (store *FileStore) Set(ctx context.Context, shortURL, originalURL, userID string) error {
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	store.URLMapping[shortURL] = originalURL
-	logger.Log.Info("Saving URLMapping", "shortURL", shortURL, "originalURL", originalURL)
+	logger.Log.Info("Saving URLMapping", "shortURL", shortURL, "originalURL", originalURL, "userID", userID)
 	logger.Log.Info("Store", "filePath:", store.FilePath)
 	store.SaveToFile(store.FilePath)
 	return nil

@@ -13,7 +13,7 @@ import (
 
 // Store интерфейс для хранилища URL
 type Store interface {
-	Set(ctx context.Context, shortURL, originalURL string) error
+	Set(ctx context.Context, shortURL, originalURL, userID string) error
 	Get(ctx context.Context, shortURL string) (string, bool)
 	SetBatch(ctx context.Context, shortURLS []models.BatchURLWrite)
 	Ping() error
