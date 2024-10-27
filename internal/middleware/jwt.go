@@ -62,6 +62,7 @@ func JWTMiddleware(next http.Handler) http.Handler {
 				Value:    tokenString,
 				Expires:  expirationTime,
 				HttpOnly: true,
+				Path:     "/",
 			})
 		} else {
 			claims := &Claims{}

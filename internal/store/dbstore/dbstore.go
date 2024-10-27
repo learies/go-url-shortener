@@ -57,20 +57,20 @@ func (ds *DBStore) SetBatch(ctx context.Context, urls []models.BatchURLWrite) {
 	)
 
 	query := `
-    INSERT INTO urls (id, short_url, original_url)
+    INSERT INTO urls (id, short_url, original_url, user_id)
     VALUES %s
     ON CONFLICT (short_url) DO UPDATE SET original_url = EXCLUDED.original_url;`
 
 	for i, response := range urls {
 		// Создание плейсхолдера для каждой строки
 		// ($1, $2, $3), ($4, $5, $6), ...
-		placeholder := fmt.Sprintf("($%d, $%d, $%d)", (i*3)+1, (i*3)+2, (i*3)+3)
+		placeholder := fmt.Sprintf("($%d, $%d, $%d, $%d)", (i*4)+1, (i*4)+2, (i*4)+3, (i*4)+4)
 		queryValues += placeholder
 		if i < len(urls)-1 {
 			queryValues += ", "
 		}
 
-		args = append(args, response.CorrelationID, response.ShortURL, response.OriginalURL)
+		args = append(args, response.CorrelationID, response.ShortURL, response.OriginalURL, response.UserID)
 	}
 
 	fullQuery := fmt.Sprintf(query, queryValues)

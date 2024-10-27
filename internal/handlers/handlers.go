@@ -83,6 +83,13 @@ func PostAPIBatchHandler(store store.Store, cfg config.Config, urlShortener *sho
 		ctx, cancel := context.WithTimeout(r.Context(), time.Second*10)
 		defer cancel()
 
+		// Получим userID из контекста
+		userID, ok := contextutils.GetUserID(ctx)
+		if !ok {
+			http.Error(w, "UserID not found in context", http.StatusUnauthorized)
+			return
+		}
+
 		if r.Body == nil {
 			http.Error(w, "Empty request body", http.StatusBadRequest)
 			return
@@ -112,6 +119,7 @@ func PostAPIBatchHandler(store store.Store, cfg config.Config, urlShortener *sho
 				CorrelationID: request.CorrelationID,
 				ShortURL:      shortURL,
 				OriginalURL:   request.OriginalURL,
+				UserID:        userID,
 			})
 		}
 
