@@ -198,7 +198,7 @@ func GetHandler(store store.Store) http.HandlerFunc {
 	}
 }
 
-func GetAPIUserURLsHandler(store store.Store) http.HandlerFunc {
+func GetAPIUserURLsHandler(store store.Store, cfg config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), time.Second*10)
 		defer cancel()
@@ -221,7 +221,18 @@ func GetAPIUserURLsHandler(store store.Store) http.HandlerFunc {
 			return
 		}
 
-		result, err := json.Marshal(urls)
+		// Модифицируем URL для возврата
+		modifiedUrls := make([]models.URL, len(urls))
+
+		// Для каждого URL добавим BaseURL
+		for i, url := range urls {
+			modifiedUrls[i] = models.URL{
+				ShortURL:    cfg.BaseURL + "/" + url.ShortURL,
+				OriginalURL: url.OriginalURL,
+			}
+		}
+
+		result, err := json.Marshal(modifiedUrls)
 		if err != nil {
 			http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
 			return

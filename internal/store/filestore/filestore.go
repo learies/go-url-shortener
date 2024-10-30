@@ -98,14 +98,14 @@ func (store *FileStore) LoadFromFile(filePath string) error {
 }
 
 // GetUserUrls получает URL пользователя из памяти или файла
-func (store *FileStore) GetUserUrls(ctx context.Context, userID string) ([]models.Url, bool) {
+func (store *FileStore) GetUserUrls(ctx context.Context, userID string) ([]models.URL, bool) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	store.LoadFromFile(store.FilePath)
 
-	var userUrls []models.Url
+	var userUrls []models.URL
 	for shortURL, originalURL := range store.URLMapping {
-		userUrls = append(userUrls, models.Url{ShortURL: shortURL, OriginalURL: originalURL})
+		userUrls = append(userUrls, models.URL{ShortURL: shortURL, OriginalURL: originalURL})
 	}
 
 	return userUrls, true

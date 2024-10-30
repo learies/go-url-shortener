@@ -25,7 +25,7 @@ type BatchURLWrite struct {
 	UserID        string `json:"user_id"`
 }
 
-type Url struct {
+type URL struct {
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 }
