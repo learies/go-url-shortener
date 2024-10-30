@@ -101,6 +101,12 @@ func (ds *DBStore) GetUserUrls(ctx context.Context, userID string) ([]models.Url
 		urls = append(urls, url)
 	}
 
+	// Check for any error after closing the loop
+	if err = rows.Err(); err != nil {
+		logger.Log.Error("Failed during rows iteration", "error", err)
+		return nil, false
+	}
+
 	return urls, true
 }
 

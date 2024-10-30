@@ -217,7 +217,7 @@ func GetAPIUserURLsHandler(store store.Store) http.HandlerFunc {
 		}
 
 		if len(urls) == 0 {
-			w.WriteHeader(http.StatusNoContent)
+			w.WriteHeader(http.StatusUnauthorized) // Переделать на 204
 			return
 		}
 
