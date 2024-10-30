@@ -198,6 +198,41 @@ func GetHandler(store store.Store) http.HandlerFunc {
 	}
 }
 
+func GetAPIUserURLsHandler(store store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second*10)
+		defer cancel()
+
+		// Получим userID из контекста
+		userID, ok := contextutils.GetUserID(ctx)
+		if !ok {
+			http.Error(w, "UserID not found in context", http.StatusUnauthorized)
+			return
+		}
+
+		urls, ok := store.GetUserUrls(ctx, userID)
+		if !ok {
+			http.Error(w, "URLs not found", http.StatusNotFound)
+			return
+		}
+
+		if len(urls) == 0 {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		result, err := json.Marshal(urls)
+		if err != nil {
+			http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(result)
+	}
+}
+
 // PingHandler проверяет доступность хранилища URL
 func PingHandler(store store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

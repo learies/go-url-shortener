@@ -97,6 +97,20 @@ func (store *FileStore) LoadFromFile(filePath string) error {
 	return nil
 }
 
+// GetUserUrls получает URL пользователя из памяти или файла
+func (store *FileStore) GetUserUrls(ctx context.Context, userID string) ([]models.Url, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	store.LoadFromFile(store.FilePath)
+
+	var userUrls []models.Url
+	for shortURL, originalURL := range store.URLMapping {
+		userUrls = append(userUrls, models.Url{ShortURL: shortURL, OriginalURL: originalURL})
+	}
+
+	return userUrls, true
+}
+
 // Ping проверяет доступность хранилища URL
 func (store *FileStore) Ping() error {
 	err := errors.New("unable to access the store")

@@ -80,6 +80,30 @@ func (ds *DBStore) SetBatch(ctx context.Context, urls []models.BatchURLWrite) {
 	}
 }
 
+// GetBatch получает пакет URL из базы данных
+func (ds *DBStore) GetUserUrls(ctx context.Context, userID string) ([]models.Url, bool) {
+	var urls []models.Url
+
+	rows, err := ds.DB.QueryContext(ctx, "SELECT short_url, original_url FROM urls WHERE user_id = $1", userID)
+	if err != nil {
+		logger.Log.Error("Failed to get user URLs from database", "error", err)
+		return nil, false
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var url models.Url
+		err := rows.Scan(&url.ShortURL, &url.OriginalURL)
+		if err != nil {
+			logger.Log.Error("Failed to scan user URLs from database", "error", err)
+			return nil, false
+		}
+		urls = append(urls, url)
+	}
+
+	return urls, true
+}
+
 // Ping проверяет доступность базы данных
 func (ds *DBStore) Ping() error {
 	return ds.DB.Ping()
