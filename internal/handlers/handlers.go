@@ -262,13 +262,11 @@ func DeleteUserUrlsHandler(store store.Store) http.HandlerFunc {
 			return
 		}
 
-		// Мы не ждем завершения операции удаления URL
-		go func() {
-			if err := store.DeleteUserUrls(ctx, userID, shortURLS); err != nil {
-				logger.Log.Error("Failed to delete URLs", "error", err)
-				// Здесь мы не можем модифицировать ответ, так как он уже отправлен клиенту
-			}
-		}()
+		if err := store.DeleteUserUrls(ctx, userID, shortURLS); err != nil {
+			logger.Log.Error("Failed to delete URLs", "error", err)
+			http.Error(w, "Failed to delete URLs", http.StatusInternalServerError)
+			return
+		}
 
 		w.WriteHeader(http.StatusAccepted)
 	}
