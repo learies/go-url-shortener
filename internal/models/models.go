@@ -1,7 +1,7 @@
 package models
 
 type Storage struct {
-	Id          string `db:"id" json:"id"`
+	ID          string `db:"id" json:"id"`
 	ShortURL    string `db:"short_url" json:"short_url"`
 	OriginalURL string `db:"original_url" json:"original_url"`
 	UserID      string `db:"user_id" json:"user_id"`

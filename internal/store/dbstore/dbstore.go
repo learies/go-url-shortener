@@ -34,7 +34,7 @@ func (ds *DBStore) Set(ctx context.Context, shortURL, originalURL, userID string
 func (ds *DBStore) Get(ctx context.Context, shortURL string) (*models.Storage, bool) {
 	var s models.Storage
 	err := ds.DB.QueryRowContext(ctx, "SELECT id, short_url, original_url, user_id, is_deleted FROM urls WHERE short_url = $1", shortURL).Scan(
-		&s.Id, &s.ShortURL, &s.OriginalURL, &s.UserID, &s.DeletedFlag,
+		&s.ID, &s.ShortURL, &s.OriginalURL, &s.UserID, &s.DeletedFlag,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
