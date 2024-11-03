@@ -246,10 +246,9 @@ func GetAPIUserURLsHandler(store store.Store, cfg config.Config) http.HandlerFun
 
 func DeleteUserUrlsHandler(store store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), time.Second*10)
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second*60)
 		defer cancel()
 
-		// Получим userID из контекста
 		userID, ok := contextutils.GetUserID(ctx)
 		if !ok {
 			http.Error(w, "UserID not found in context", http.StatusUnauthorized)
@@ -262,11 +261,14 @@ func DeleteUserUrlsHandler(store store.Store) http.HandlerFunc {
 			return
 		}
 
-		if err := store.DeleteUserUrls(ctx, userID, shortURLS); err != nil {
-			logger.Log.Error("Failed to delete URLs", "error", err)
-			http.Error(w, "Failed to delete URLs", http.StatusInternalServerError)
-			return
-		}
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
+
+			if err := store.DeleteUserUrls(ctx, userID, shortURLS); err != nil {
+				logger.Log.Error("Failed to delete URLs", "error", err)
+			}
+		}()
 
 		w.WriteHeader(http.StatusAccepted)
 	}
