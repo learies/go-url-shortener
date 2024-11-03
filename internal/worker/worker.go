@@ -8,8 +8,8 @@ func GenerateShortURL(deleteUserUrls ...models.UserURL) chan models.UserURL {
 	ch := make(chan models.UserURL, len(deleteUserUrls))
 	go func() {
 		defer close(ch)
-		for _, userUrl := range deleteUserUrls {
-			ch <- userUrl
+		for _, userURL := range deleteUserUrls {
+			ch <- userURL
 		}
 	}()
 	return ch
