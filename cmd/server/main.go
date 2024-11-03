@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/learies/go-url-shortener/internal/config/logger"
+	"github.com/learies/go-url-shortener/internal/db"
 	"github.com/learies/go-url-shortener/internal/router"
 )
 
@@ -15,6 +16,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not initialize logger: %v", err)
 	}
+
+	// Initialize the database
+	db.Init()
+	defer db.Close()
 
 	r := router.InitRouter()
 

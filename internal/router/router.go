@@ -21,6 +21,7 @@ func InitRouter() http.Handler {
 
 	// Define routes
 	r.Get("/", handler.HelloHandler())
+	r.Get("/ping", handler.PingHandler())
 
 	return r
 }
