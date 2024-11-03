@@ -3,7 +3,6 @@ package dbstore
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/learies/go-url-shortener/internal/logger"
@@ -47,36 +46,31 @@ func (ds *DBStore) Get(ctx context.Context, shortURL string) (string, bool) {
 
 // SetBatch сохраняет пакет URL в базе данных
 func (ds *DBStore) SetBatch(ctx context.Context, urls []models.BatchURLWrite) {
-	if len(urls) == 0 {
+	tx, err := ds.DB.Begin()
+	if err != nil {
+		logger.Log.Error("Failed to start transaction", "error", err)
 		return
 	}
 
-	var (
-		queryValues string
-		args        []interface{}
-	)
-
-	query := `
-    INSERT INTO urls (id, short_url, original_url, user_id)
-    VALUES %s
-    ON CONFLICT (short_url) DO UPDATE SET original_url = EXCLUDED.original_url;`
-
-	for i, response := range urls {
-		// Создание плейсхолдера для каждой строки
-		// ($1, $2, $3), ($4, $5, $6), ...
-		placeholder := fmt.Sprintf("($%d, $%d, $%d, $%d)", (i*4)+1, (i*4)+2, (i*4)+3, (i*4)+4)
-		queryValues += placeholder
-		if i < len(urls)-1 {
-			queryValues += ", "
-		}
-
-		args = append(args, response.CorrelationID, response.ShortURL, response.OriginalURL, response.UserID)
-	}
-
-	fullQuery := fmt.Sprintf(query, queryValues)
-	_, err := ds.DB.ExecContext(ctx, fullQuery, args...)
+	stmt, err := tx.PrepareContext(ctx, "INSERT INTO urls (id, short_url, original_url, user_id) VALUES ($1, $2, $3, $4)")
 	if err != nil {
-		logger.Log.Error("Failed to set URL mapping in database", "error", err)
+		logger.Log.Error("Failed to prepare statement", "error", err)
+		tx.Rollback()
+		return
+	}
+	defer stmt.Close()
+
+	for _, url := range urls {
+		_, err := stmt.ExecContext(ctx, url.CorrelationID, url.ShortURL, url.OriginalURL, url.UserID)
+		if err != nil {
+			logger.Log.Error("Failed to insert URL", "error", err)
+			tx.Rollback()
+			logger.Log.Info("Transaction rolled back")
+		}
+	}
+	err = tx.Commit()
+	if err != nil {
+		logger.Log.Error("Failed to commit transaction", "error", err)
 	}
 }
 
