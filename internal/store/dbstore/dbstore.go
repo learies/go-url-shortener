@@ -30,10 +30,10 @@ func (ds *DBStore) Set(ctx context.Context, shortURL, originalURL, userID string
 	return nil
 }
 
-// Get получает URL из базы данных
+// Get получает URL из базы данных если is_deleted = false
 func (ds *DBStore) Get(ctx context.Context, shortURL string) (string, bool) {
 	var originalURL string
-	err := ds.DB.QueryRowContext(ctx, "SELECT original_url FROM urls WHERE short_url = $1", shortURL).Scan(&originalURL)
+	err := ds.DB.QueryRowContext(ctx, "SELECT original_url FROM urls WHERE short_url = $1 AND is_deleted = false", shortURL).Scan(&originalURL)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", false
@@ -105,13 +105,33 @@ func (ds *DBStore) GetUserUrls(ctx context.Context, userID string) ([]models.URL
 }
 
 // DeleteUserUrls устанавливает флаг is_deleted в true для URL, принадлежащих пользователю.
-func (ds *DBStore) DeleteUserUrls(ctx context.Context, userID string, shortURLs []string) error {
-	query := "UPDATE urls SET is_deleted = TRUE WHERE user_id = $1 AND short_url = ANY($2)"
-	_, err := ds.DB.ExecContext(ctx, query, userID, shortURLs)
+func (ds *DBStore) DeleteUserUrls(ctx context.Context, deleteUserURLs <-chan models.UserURL) {
+	tx, err := ds.DB.Begin()
 	if err != nil {
-		return err
+		logger.Log.Error("Failed to start transaction", "error", err)
+		return
 	}
-	return nil
+
+	stmt, err := tx.PrepareContext(ctx, "UPDATE urls SET is_deleted = true WHERE user_id = $1 AND short_url = $2")
+	if err != nil {
+		logger.Log.Error("Failed to prepare statement", "error", err)
+		tx.Rollback()
+		return
+	}
+	defer stmt.Close()
+
+	for userURL := range deleteUserURLs {
+		_, err := stmt.ExecContext(ctx, userURL.UserID, userURL.ShortURL)
+		if err != nil {
+			logger.Log.Error("Failed to delete URL", "error", err)
+			tx.Rollback()
+			logger.Log.Info("Transaction rolled back")
+		}
+	}
+	err = tx.Commit()
+	if err != nil {
+		logger.Log.Error("Failed to commit transaction", "error", err)
+	}
 }
 
 // Ping проверяет доступность базы данных

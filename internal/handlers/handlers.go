@@ -15,6 +15,7 @@ import (
 	"github.com/learies/go-url-shortener/internal/models"
 	"github.com/learies/go-url-shortener/internal/shortener"
 	"github.com/learies/go-url-shortener/internal/store"
+	"github.com/learies/go-url-shortener/internal/worker"
 )
 
 func PostAPIHandler(store store.Store, cfg config.Config, urlShortener *shortener.URLShortener) http.HandlerFunc {
@@ -189,7 +190,7 @@ func GetHandler(store store.Store) http.HandlerFunc {
 
 		originalURL, exists := store.Get(ctx, id)
 		if !exists {
-			http.Error(w, "URL not found", http.StatusNotFound)
+			http.Error(w, "URL not found", http.StatusGone)
 			return
 		}
 
@@ -246,7 +247,7 @@ func GetAPIUserURLsHandler(store store.Store, cfg config.Config) http.HandlerFun
 
 func DeleteUserUrlsHandler(store store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), time.Second*60)
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second*10)
 		defer cancel()
 
 		userID, ok := contextutils.GetUserID(ctx)
@@ -255,20 +256,18 @@ func DeleteUserUrlsHandler(store store.Store) http.HandlerFunc {
 			return
 		}
 
-		var shortURLS []string
-		if err := json.NewDecoder(r.Body).Decode(&shortURLS); err != nil {
+		var shortURLs models.ShortURLs
+		if err := json.NewDecoder(r.Body).Decode(&shortURLs.ShortURLs); err != nil {
 			http.Error(w, "Failed to decode request body", http.StatusBadRequest)
 			return
 		}
 
-		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-			defer cancel()
-
-			if err := store.DeleteUserUrls(ctx, userID, shortURLS); err != nil {
-				logger.Log.Error("Failed to delete URLs", "error", err)
-			}
-		}()
+		for _, shortURL := range shortURLs.ShortURLs {
+			store.DeleteUserUrls(ctx, worker.GenerateShortURL(models.UserURL{
+				UserID:   userID,
+				ShortURL: shortURL,
+			}))
+		}
 
 		w.WriteHeader(http.StatusAccepted)
 	}

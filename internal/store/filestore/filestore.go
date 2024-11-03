@@ -112,9 +112,8 @@ func (store *FileStore) GetUserUrls(ctx context.Context, userID string) ([]model
 }
 
 // DeleteUserUrls удаляет URL пользователя из памяти и файла
-func (store *FileStore) DeleteUserUrls(ctx context.Context, userID string, shortURLS []string) error {
+func (store *FileStore) DeleteUserUrls(ctx context.Context, deleteUserURLs <-chan models.UserURL) {
 	// Не реализовано
-	return nil
 }
 
 // Ping проверяет доступность хранилища URL
