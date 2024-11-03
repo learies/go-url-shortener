@@ -31,17 +31,20 @@ func (ds *DBStore) Set(ctx context.Context, shortURL, originalURL, userID string
 }
 
 // Get получает URL из базы данных если is_deleted = false
-func (ds *DBStore) Get(ctx context.Context, shortURL string) (string, bool) {
-	var originalURL string
-	err := ds.DB.QueryRowContext(ctx, "SELECT original_url FROM urls WHERE short_url = $1 AND is_deleted = false", shortURL).Scan(&originalURL)
+func (ds *DBStore) Get(ctx context.Context, shortURL string) (*models.Storage, bool) {
+	var s models.Storage
+	err := ds.DB.QueryRowContext(ctx, "SELECT id, short_url, original_url, user_id, is_deleted FROM urls WHERE short_url = $1", shortURL).Scan(
+		&s.Id, &s.ShortURL, &s.OriginalURL, &s.UserID, &s.DeletedFlag,
+	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return "", false
+			return nil, false
 		}
 		logger.Log.Error("Failed to get URL mapping from database", "error", err)
-		return "", false
+		return nil, false
 	}
-	return originalURL, true
+
+	return &s, true
 }
 
 // SetBatch сохраняет пакет URL в базе данных

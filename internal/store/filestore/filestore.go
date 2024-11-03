@@ -15,6 +15,7 @@ import (
 type FileStore struct {
 	URLMapping map[string]string
 	FilePath   string
+	Storage    models.Storage
 	mu         sync.Mutex
 }
 
@@ -36,12 +37,21 @@ func (store *FileStore) Set(ctx context.Context, shortURL, originalURL, userID s
 }
 
 // Get получает URL из памяти или из файла
-func (store *FileStore) Get(ctx context.Context, shortURL string) (string, bool) {
-	store.mu.Lock()
-	defer store.mu.Unlock()
-	store.LoadFromFile(store.FilePath)
-	originalURL, exists := store.URLMapping[shortURL]
-	return originalURL, exists
+func (s *FileStore) Get(ctx context.Context, shortURL string) (*models.Storage, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := s.LoadFromFile(s.FilePath); err != nil {
+		logger.Log.Error("Failed to load URL mapping from file", "error", err)
+		return nil, false
+	}
+
+	originalURL, exists := s.URLMapping[shortURL]
+	if !exists {
+		return nil, false
+	}
+
+	return &models.Storage{ShortURL: shortURL, OriginalURL: originalURL}, true
 }
 
 // SetBatch сохраняет URL в память и файл

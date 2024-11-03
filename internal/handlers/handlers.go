@@ -186,15 +186,20 @@ func GetHandler(store store.Store) http.HandlerFunc {
 		ctx, cancel := context.WithTimeout(r.Context(), time.Second*10)
 		defer cancel()
 
-		id := strings.TrimPrefix(r.URL.Path, "/")
+		shortURL := strings.TrimPrefix(r.URL.Path, "/")
 
-		originalURL, exists := store.Get(ctx, id)
+		s, exists := store.Get(ctx, shortURL)
 		if !exists {
 			http.Error(w, "URL not found", http.StatusNotFound)
 			return
 		}
 
-		w.Header().Set("Location", originalURL)
+		if s.DeletedFlag {
+			http.Error(w, "URL is deleted", http.StatusGone)
+			return
+		}
+
+		w.Header().Set("Location", s.OriginalURL)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
 }

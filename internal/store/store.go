@@ -14,7 +14,7 @@ import (
 // Store интерфейс для хранилища URL
 type Store interface {
 	Set(ctx context.Context, shortURL, originalURL, userID string) error
-	Get(ctx context.Context, shortURL string) (string, bool)
+	Get(ctx context.Context, shortURL string) (*models.Storage, bool)
 	SetBatch(ctx context.Context, shortURLS []models.BatchURLWrite)
 	GetUserUrls(ctx context.Context, userID string) ([]models.URL, bool)
 	DeleteUserUrls(ctx context.Context, deleteUserURLs <-chan models.UserURL)
