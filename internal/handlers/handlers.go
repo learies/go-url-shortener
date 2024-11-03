@@ -190,7 +190,7 @@ func GetHandler(store store.Store) http.HandlerFunc {
 
 		originalURL, exists := store.Get(ctx, id)
 		if !exists {
-			http.Error(w, "URL not found", http.StatusGone)
+			http.Error(w, "URL not found", http.StatusNotFound)
 			return
 		}
 
