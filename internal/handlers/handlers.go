@@ -244,6 +244,36 @@ func GetAPIUserURLsHandler(store store.Store, cfg config.Config) http.HandlerFun
 	}
 }
 
+func DeleteUserUrlsHandler(store store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second*10)
+		defer cancel()
+
+		// Получим userID из контекста
+		userID, ok := contextutils.GetUserID(ctx)
+		if !ok {
+			http.Error(w, "UserID not found in context", http.StatusUnauthorized)
+			return
+		}
+
+		var shortURLS []string
+		if err := json.NewDecoder(r.Body).Decode(&shortURLS); err != nil {
+			http.Error(w, "Failed to decode request body", http.StatusBadRequest)
+			return
+		}
+
+		// Мы не ждем завершения операции удаления URL
+		go func() {
+			if err := store.DeleteUserUrls(ctx, userID, shortURLS); err != nil {
+				logger.Log.Error("Failed to delete URLs", "error", err)
+				// Здесь мы не можем модифицировать ответ, так как он уже отправлен клиенту
+			}
+		}()
+
+		w.WriteHeader(http.StatusAccepted)
+	}
+}
+
 // PingHandler проверяет доступность хранилища URL
 func PingHandler(store store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

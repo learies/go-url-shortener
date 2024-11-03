@@ -110,6 +110,16 @@ func (ds *DBStore) GetUserUrls(ctx context.Context, userID string) ([]models.URL
 	return urls, true
 }
 
+// DeleteUserUrls устанавливает флаг is_deleted в true для URL, принадлежащих пользователю.
+func (ds *DBStore) DeleteUserUrls(ctx context.Context, userID string, shortURLs []string) error {
+	query := "UPDATE urls SET is_deleted = TRUE WHERE user_id = $1 AND short_url = ANY($2)"
+	_, err := ds.DB.ExecContext(ctx, query, userID, shortURLs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Ping проверяет доступность базы данных
 func (ds *DBStore) Ping() error {
 	return ds.DB.Ping()

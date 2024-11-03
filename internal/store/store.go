@@ -17,6 +17,7 @@ type Store interface {
 	Get(ctx context.Context, shortURL string) (string, bool)
 	SetBatch(ctx context.Context, shortURLS []models.BatchURLWrite)
 	GetUserUrls(ctx context.Context, userID string) ([]models.URL, bool)
+	DeleteUserUrls(ctx context.Context, userID string, shortURLS []string) error
 	Ping() error
 }
 

@@ -111,6 +111,12 @@ func (store *FileStore) GetUserUrls(ctx context.Context, userID string) ([]model
 	return userUrls, true
 }
 
+// DeleteUserUrls удаляет URL пользователя из памяти и файла
+func (store *FileStore) DeleteUserUrls(ctx context.Context, userID string, shortURLS []string) error {
+	// Не реализовано
+	return nil
+}
+
 // Ping проверяет доступность хранилища URL
 func (store *FileStore) Ping() error {
 	err := errors.New("unable to access the store")

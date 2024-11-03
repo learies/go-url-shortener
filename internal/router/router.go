@@ -35,6 +35,7 @@ func NewRouter(cfg config.Config) http.Handler {
 	r.Post("/api/shorten", handlers.PostAPIHandler(store, cfg, urlShortener))
 	r.Post("/api/shorten/batch", handlers.PostAPIBatchHandler(store, cfg, urlShortener))
 	r.Get("/api/user/urls", handlers.GetAPIUserURLsHandler(store, cfg))
+	r.Delete("/api/user/urls", handlers.DeleteUserUrlsHandler(store))
 	r.Get("/*", handlers.GetHandler(store))
 	r.Get("/ping", handlers.PingHandler(store))
 
