@@ -15,6 +15,7 @@ import (
 type FileStore struct {
 	URLMapping map[string]string
 	FilePath   string
+	Storage    models.Storage
 	mu         sync.Mutex
 }
 
@@ -25,23 +26,32 @@ type URLMapping struct {
 }
 
 // Set сохраняет URL в память и файл
-func (store *FileStore) Set(ctx context.Context, shortURL, originalURL string) error {
+func (store *FileStore) Set(ctx context.Context, shortURL, originalURL, userID string) error {
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	store.URLMapping[shortURL] = originalURL
-	logger.Log.Info("Saving URLMapping", "shortURL", shortURL, "originalURL", originalURL)
+	logger.Log.Info("Saving URLMapping", "shortURL", shortURL, "originalURL", originalURL, "userID", userID)
 	logger.Log.Info("Store", "filePath:", store.FilePath)
 	store.SaveToFile(store.FilePath)
 	return nil
 }
 
 // Get получает URL из памяти или из файла
-func (store *FileStore) Get(ctx context.Context, shortURL string) (string, bool) {
+func (store *FileStore) Get(ctx context.Context, shortURL string) (*models.Storage, bool) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
-	store.LoadFromFile(store.FilePath)
+
+	if err := store.LoadFromFile(store.FilePath); err != nil {
+		logger.Log.Error("Failed to load URL mapping from file", "error", err)
+		return nil, false
+	}
+
 	originalURL, exists := store.URLMapping[shortURL]
-	return originalURL, exists
+	if !exists {
+		return nil, false
+	}
+
+	return &models.Storage{ShortURL: shortURL, OriginalURL: originalURL}, true
 }
 
 // SetBatch сохраняет URL в память и файл
@@ -95,6 +105,33 @@ func (store *FileStore) LoadFromFile(filePath string) error {
 	}
 
 	return nil
+}
+
+// GetUserUrls получает URL пользователя из памяти или файла
+func (store *FileStore) GetUserUrls(ctx context.Context, userID string) ([]models.URL, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	store.LoadFromFile(store.FilePath)
+
+	var userUrls []models.URL
+	for shortURL, originalURL := range store.URLMapping {
+		userUrls = append(userUrls, models.URL{ShortURL: shortURL, OriginalURL: originalURL})
+	}
+
+	return userUrls, true
+}
+
+// DeleteUserUrls удаляет URL пользователя из памяти и файла
+func (store *FileStore) DeleteUserUrls(ctx context.Context, deleteUserURLs <-chan models.UserURL) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	store.LoadFromFile(store.FilePath)
+
+	for userURL := range deleteUserURLs {
+		delete(store.URLMapping, userURL.ShortURL)
+	}
+
+	store.SaveToFile(store.FilePath)
 }
 
 // Ping проверяет доступность хранилища URL

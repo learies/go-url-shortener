@@ -23,10 +23,11 @@ func initialize(db *sql.DB) error {
 	query := `
 	CREATE TABLE IF NOT EXISTS urls (
 		id UUID PRIMARY KEY,
-	    short_url VARCHAR(8) NOT NULL UNIQUE,
-	    original_url TEXT NOT NULL UNIQUE,
-	    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    );`
+		short_url VARCHAR(8) NOT NULL UNIQUE,
+		original_url TEXT NOT NULL UNIQUE,
+		user_id UUID NOT NULL,
+		is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+	);`
 
 	_, err := db.Exec(query)
 	if err != nil {
